@@ -3180,6 +3180,12 @@ enum PageId {
     // CATEGORY: SETTINGS
     // OS: S
     SETTINGS_BUTTON_NAV_DLG = 1907;
+
+    // Kscope addons
+
+    // OPEN: Settings > Laboratory
+    // CATEGORY: SETTINGS
+    LABORATORY = 3000;
 }
 
 // Battery Saver schedule types.
