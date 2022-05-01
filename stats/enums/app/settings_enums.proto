@@ -3231,6 +3231,10 @@ enum PageId {
     // OPEN: Settings > Laboratory
     // CATEGORY: SETTINGS
     LABORATORY = 3000;
+
+    // OPEN: Settings > Battery > Battery Health
+    // CATEGORY: SETTINGS
+    BATTERY_HEALTH = 3001;
 }
 
 // Battery Saver schedule types.
