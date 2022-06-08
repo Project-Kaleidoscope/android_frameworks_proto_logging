@@ -34,6 +34,7 @@ import "frameworks/proto_logging/stats/enums/bluetooth/smp/enums.proto";
 import "frameworks/proto_logging/stats/enums/debug/enums.proto";
 import "frameworks/proto_logging/stats/enums/hardware/biometrics/enums.proto";
 import "frameworks/proto_logging/stats/enums/hardware/sensor/assist/enums.proto";
+import "frameworks/proto_logging/stats/enums/hotword/enums.proto";
 import "frameworks/proto_logging/stats/enums/net/enums.proto";
 import "frameworks/proto_logging/stats/enums/os/enums.proto";
 import "frameworks/proto_logging/stats/enums/server/connectivity/data_stall_event.proto";
@@ -583,6 +584,16 @@ message Atom {
         SplitscreenUIChanged splitscreen_ui_changed = 388 [(module) = "framework"];
         AccessibilityFloatingMenuUIChanged accessibility_floating_menu_ui_changed = 393 [(module) = "sysui"];
         CameraCompatControlEventReported camera_compat_control_event_reported = 411 [(module) = "framework"];
+        HotwordDetectorCreateRequested hotword_detector_create_requested = 430
+            [(module) = "framework"];
+        HotwordDetectionServiceInitResultReported hotword_detection_service_init_result_reported = 431
+            [(module) = "framework"];
+        HotwordDetectionServiceRestarted hotword_detection_service_restarted = 432
+            [(module) = "framework"];
+        HotwordDetectorKeyphraseTriggered hotword_detector_keyphrase_triggered = 433
+            [(module) = "framework"];
+        HotwordDetectorEvents hotword_detector_events = 434
+            [(module) = "framework"];
 
         // StatsdStats tracks platform atoms with ids upto 500.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
@@ -3647,15 +3658,49 @@ message SmartSpaceCardReported {
     optional int32 card_type_id = 7;
     // The app that the Smartspace card is tied to.
     optional int32 uid = 8 [(is_uid) = true];
-    // If multiple subcards are displayed simultaneously, the position of
-    // the subcard that was interacted with.
+    // This represents the interaction subaction for the given card.
     optional int32 interacted_subcard_rank = 9;
-    // If multiple subcards are displayed simultaneously, the number of subcards
-    // shown when the interaction occurred.
+    // This represents the number of displayed subactions on the given card when a subaction click
+    // occurred.
     optional int32 interacted_subcard_cardinality = 10;
     // The time it takes in ms from smartspace target is created to sysui receives
     // the target.
     optional int32 received_latency_millis = 11;
+    // The sub cards.
+    optional SmartSpaceSubcards subcards_info = 12 [(log_mode) = MODE_BYTES];
+}
+
+/**
+ * This message represents information about any SmartSpace subcards.
+ * Logged from
+ *   vendor/unbundled_google/packages/SystemUIGoogle/bcsmartspace/src/com/google/android/systemui/smartspace/BcSmartspaceLogger.java
+ *   vendor/unbundled_google/packages/NexusLauncher/src/com/google/android/apps/nexuslauncher/qsb/SmartspaceViewContainer.java
+ * Next Tag: 3
+ */
+message SmartSpaceSubcards {
+    // List of subcards.
+    repeated SmartSpaceCardMetadata subcards = 1;
+    // The index of the clicked subcard, if applicable.
+    // This index is 1 indexed as opposed to 0 indexed due to sint32 encoding
+    // limitation when using -1 as a default.
+    // Default will be 0 to denote that no subcard was clicked.
+    // Please note this has no information about whether the primary card was
+    // clicked or not. Basically if this has the value 0, just ignore this field.
+    optional int32 clicked_subcard_index = 2;
+}
+
+/**
+ * This message represents metadata for a SmartSpace card.
+ * Logged from
+ *   vendor/unbundled_google/packages/SystemUIGoogle/bcsmartspace/src/com/google/android/systemui/smartspace/BcSmartspaceLogger.java
+ *   vendor/unbundled_google/packages/NexusLauncher/src/com/google/android/apps/nexuslauncher/qsb/SmartspaceViewContainer.java
+ * Next Tag: 3
+ */
+message SmartSpaceCardMetadata {
+    // Uniquely identifies a card. Should persist through updates.
+    optional int32 instance_id = 1;
+    // The type of the card.
+    optional int32 card_type_id = 2;
 }
 
 /**
@@ -15385,6 +15430,10 @@ message CarWatchdogProcessStat {
 message CarWatchdogSystemIoUsageSummary {
     // I/O usage summary for the system.
     optional CarWatchdogIoUsageSummary io_usage_summary = 1 [(log_mode) = MODE_BYTES];
+
+    // Start time of the event in milliseconds since epoch.
+    // Note: This field must be a top-level field as it is used to slice the metrics.
+    optional int64 start_time_millis = 2;
 }
 
 /**
@@ -15402,6 +15451,10 @@ message CarWatchdogUidIoUsageSummary {
 
     // I/O usage summary for the UID.
     optional CarWatchdogIoUsageSummary io_usage_summary = 2 [(log_mode) = MODE_BYTES];
+
+    // Start time of the event in milliseconds since epoch.
+    // Note: This field must be a top-level field as it is used to slice the metrics.
+    optional int64 start_time_millis = 3;
 }
 
 /**
@@ -15439,8 +15492,8 @@ message CarWatchdogEventTimePeriod {
         MONTHLY = 3;
     }
 
-    // Start time of the event in milliseconds since epoch.
-    optional uint64 start_time_millis = 1;
+    // Deprecated field - Start time of the event in milliseconds since epoch.
+    optional uint64 start_time_millis = 1 [deprecated = true];
 
     // Period for the event.
     optional Period period = 2;
@@ -17540,3 +17593,140 @@ message GbaEvent {
     optional int32 count = 5;
 }
 
+/**
+ * Logs information related to creating hotword detector.
+ */
+message HotwordDetectorCreateRequested {
+    // The type of detector.
+    optional android.hotword.HotwordDetectorType detector_type = 1;
+
+    // True if the detector is created successfully.
+    optional bool is_created_done = 2;
+
+    // The UID for which assistant application is active.
+    optional int32 uid = 3 [(is_uid) = true];
+}
+
+/**
+ * Logs information related to hotword detection service init result.
+ */
+message HotwordDetectionServiceInitResultReported {
+    // The type of detector.
+    optional android.hotword.HotwordDetectorType detector_type = 1;
+
+    // The result of initialization.
+    enum Result {
+        // Indicates that the service was initialized successfully.
+        CALLBACK_INIT_STATE_SUCCESS = 0;
+
+        // Indicates that the service was not initialized successfully.
+        CALLBACK_INIT_STATE_ERROR = 1;
+
+        // Indicates that the callback was invoked without init state.
+        CALLBACK_INIT_STATE_UNKNOWN_NO_VALUE = 2;
+
+        // Indicates that the callback was invoked, but the init state value exceeded
+        // the defined maximum.
+        CALLBACK_INIT_STATE_UNKNOWN_OVER_MAX_CUSTOM_VALUE = 3;
+
+        // Indicates that the callback was not invoked within timeout.
+        CALLBACK_INIT_STATE_UNKNOWN_TIMEOUT = 4;
+    }
+    optional Result result = 2;
+}
+
+/**
+ * Logs information related to restarting hotword detection service.
+ */
+message HotwordDetectionServiceRestarted {
+    // The type of detector.
+    optional android.hotword.HotwordDetectorType detector_type = 1;
+
+    // The reason for restarting service.
+    enum Reason {
+        // UNKNOWN value.
+        UNKNOWN = 0;
+
+        // Indicates that the service was restarted due to audio service died.
+        AUDIO_SERVICE_DIED = 1;
+
+        // Indicates that the service was restarted regularly.
+        SCHEDULE = 2;
+
+        // Indicates that the service was restarted due to service crashed.
+        CRASH = 3;
+    }
+    optional Reason reason = 2;
+}
+
+/**
+ * Logs information related to keyphrase trigger.
+ */
+message HotwordDetectorKeyphraseTriggered {
+    // The type of detector.
+    optional android.hotword.HotwordDetectorType detector_type = 1;
+
+    // The result of detection.
+    enum Result {
+        // Indicates that the system got the keyphrase from DSP.
+        KEYPHRASE_TRIGGER = 0;
+
+        // Indicates that the system can not inform the service to verify the keyphrase.
+        FAILED_TO_INFORM_SERVICE = 1;
+
+        // Indicates that the callback was not invoked within timeout after informing
+        // the service.
+        DETECT_TIMEOUT = 2;
+
+        // Indicates that the system got the exception after informing the service.
+        DETECT_EXCEPTION = 3;
+
+        // Indicates that the service crashed.
+        SERVICE_CRASH = 4;
+
+        // Indicates that the keyphrase was detected.
+        DETECTED = 5;
+
+        // Indicates that the keyphrase was not detected.
+        REJECTED = 6;
+    }
+    // What result after detecting.
+    optional Result result = 2;
+}
+
+/**
+ * Logs information related to hotword detector events.
+ */
+message HotwordDetectorEvents {
+    // The type of detector.
+    optional android.hotword.HotwordDetectorType detector_type = 1;
+
+    // The type of event.
+    enum Event {
+        // UNKNOWN value.
+        UNKNOWN = 0;
+
+        // Indicates that the system requested to bind the service.
+        REQUEST_BIND_SERVICE = 1;
+
+        // Indicates that the system connected the service successfully.
+        ON_CONNECTED = 2;
+
+        // Indicates that the system failed to bind the service.
+        REQUEST_BIND_SERVICE_FAIL = 3;
+
+        // Indicates that the system called the updateState function of service.
+        REQUEST_UPDATE_STATE = 4;
+
+        // Indicates that the callback was not invoked within timeout after calling
+        // the updateState function of service.
+        CALLBACK_UPDATE_STATE_AFTER_TIMEOUT = 5;
+
+        // Indicates that no starting recognition after creating the detector.
+        DID_NOT_CALL_START_RECOGNITION = 6;
+    }
+    optional Event event = 2;
+
+    // The UID for which assistant application is active.
+    optional int32 uid = 3 [(is_uid) = true];
+}
