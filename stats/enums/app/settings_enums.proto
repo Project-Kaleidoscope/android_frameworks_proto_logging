@@ -3235,6 +3235,10 @@ enum PageId {
     // OPEN: Settings > Battery > Battery Health
     // CATEGORY: SETTINGS
     BATTERY_HEALTH = 3001;
+
+    // OPEN: Settings > Display > Network Traffic
+    // CATEGORY: SETTINGS
+    NETWORK_TRAFFIC = 3002;
 }
 
 // Battery Saver schedule types.
