@@ -3239,6 +3239,10 @@ enum PageId {
     // OPEN: Settings > Display > Network Traffic
     // CATEGORY: SETTINGS
     NETWORK_TRAFFIC = 3002;
+
+    // OPEN: Settings > Display > Status bar lyric
+    // CATEGORY: SETTINGS
+    STATUS_BAR_LYRIC = 3003;
 }
 
 // Battery Saver schedule types.
